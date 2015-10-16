@@ -1,17 +1,23 @@
 {-# LANGUAGE MonadComprehensions #-}
 import Prelude
 import System.Process
+import System.IO
 import GHC.IO.Handle
 import Control.Concurrent
+import Control.Monad
 -- import System.IO.Memoize
 
-python :: IO (Handle, Handle, Handle)
-python = runInteractiveProcess "python" [] Nothing Nothing >>= (\(w,r,e,_) -> return (w,r,e))
+python :: IO Handle
+python = [i | (Just i,_,_,_) <- createProcess (proc "python" []){std_in = CreatePipe, std_out = UseHandle stdout, std_err = UseHandle stderr}]
 
--- python :: IO (Handle, Handle, Handle, ProcessHandle)
--- python = runInteractiveProcess "python" [] Nothing Nothing
+flush :: IO ()
+flush = hFlush stdout
 
 main :: IO ()
-main = python >>= (\(i,o,e) ->
-                     getLine >>= hPutStr i >>
-                     hGetLine o >>= putStrLn)
+main = python >>= (\i ->
+                     do
+                       putStr "py> "
+                       flush
+                       getLine >>= hPutStr i
+                       hFlush i
+                  )
